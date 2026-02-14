@@ -1,16 +1,41 @@
 <?php
 
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\CartController;
 use Illuminate\Support\Facades\Route;
+use App\Livewire\CartPage;
+use App\Models\Product;
+use App\Models\Order;
 
-// The Shop Page
-Route::get('/shop', [ProductController::class, 'index'])->name('shop.index');
+// 1. Home Route: Redirects or shows the Shop directly
+Route::get('/', function () {
+    return view('shop', ['products' => Product::all()]);
+})->name('shop.index');
 
-// Cart Logic
-Route::get('/cart', [CartController::class, 'viewCart'])->name('cart.index');
-Route::post('/add-to-cart/{id}', [CartController::class, 'addToCart'])->name('add.to.cart');
-Route::get('/checkout', [CartController::class, 'checkout'])->name('checkout');
-Route::get('/orders', [CartController::class, 'orders'])->name('orders.index');
-Route::patch('/update-cart', [CartController::class, 'updateCart'])->name('update.cart');
-Route::delete('/remove-from-cart', [CartController::class, 'removeItem'])->name('remove.from.cart');
+// 2. Shop Route (if you still want /shop to work separately)
+Route::get('/shop', function () {
+    return view('shop', ['products' => Product::all()]);
+});
+
+// 3. Cart Page: Now a full-page Livewire component
+Route::get('/cart', CartPage::class)->name('cart.index');
+
+// 4. Checkout: Handles the Order creation and session clearing
+Route::get('/checkout', function() {
+    $cart = session()->get('cart', []);
+    
+    if(empty($cart)) {
+        return redirect()->route('shop.index');
+    }
+
+    $order = Order::create([
+        'total_amount' => collect($cart)->sum(fn($i) => $i['price'] * $i['quantity']),
+        'items' => $cart, // This uses the Array Casting we fixed!
+    ]);
+
+    session()->forget('cart');
+    return view('success', ['order' => $order]);
+})->name('checkout');
+
+// 5. Order History
+Route::get('/orders', function() {
+    return view('orders', ['orders' => Order::latest()->get()]);
+})->name('orders.index');
