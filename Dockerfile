@@ -31,3 +31,12 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 EXPOSE 80
+
+# ... (Keep everything from the top down to Step 6)
+
+# Step 7: Final Permissions and Start Script
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# This is the "Magic" line:
+# It creates the DB file if it's missing and runs migrations automatically on boot
+CMD ["/bin/sh", "-c", "mkdir -p /var/data && touch /var/data/database.sqlite && php artisan migrate --seed --force && apache2-foreground"]
